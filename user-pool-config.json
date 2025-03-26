@@ -1,0 +1,31 @@
+{
+  "UserPoolId": "us-east-1_NJDIN4u6i",
+  "AutoVerifiedAttributes": ["email"],
+  "MfaConfiguration": "OFF",
+  "Schema": [
+    {
+      "Name": "phone_number",
+      "AttributeDataType": "String",
+      "Required": false,
+      "Mutable": true
+    },
+    {
+      "Name": "email",
+      "AttributeDataType": "String",
+      "Required": true,
+      "Mutable": true
+    },
+    {
+      "Name": "name",
+      "AttributeDataType": "String",
+      "Required": true,
+      "Mutable": true
+    },
+    {
+      "Name": "custom:userType",
+      "AttributeDataType": "String",
+      "Required": true,
+      "Mutable": true
+    }
+  ]
+} 

@@ -1,0 +1,10 @@
+# AWS Configuration
+NEXT_PUBLIC_AWS_REGION=us-east-1
+NEXT_PUBLIC_AWS_USER_POOL_ID=your-user-pool-id
+NEXT_PUBLIC_AWS_USER_POOL_CLIENT_ID=your-user-pool-client-id
+NEXT_PUBLIC_AWS_DYNAMODB_TABLE=PathshalaUsers
+
+# Sensitive credentials - NOT exposed to the client
+AWS_ACCESS_KEY_ID=your-access-key
+AWS_SECRET_ACCESS_KEY=your-secret-key
+
