@@ -283,10 +283,23 @@ export async function updateUserAttributes(username: string, attributes: Partial
     })
 
     // First, get the user's Cognito attributes to get the sub (userId)
-    const userDetails = await getCognitoUserAttributes(username)
-    if (!userDetails) {
+    const command = new AdminGetUserCommand({
+      UserPoolId: userPoolId,
+      Username: username,
+    })
+
+    const response = await cognitoClient.send(command)
+    if (!response.UserAttributes) {
       throw new Error('Failed to get user details from Cognito')
     }
+
+    // Find the sub attribute which is our userId
+    const sub = response.UserAttributes.find(attr => attr.Name === 'sub')?.Value
+    if (!sub) {
+      throw new Error('User sub not found in Cognito')
+    }
+
+    console.log('[updateUserAttributes] Found user sub:', sub)
 
     // Update Cognito attributes
     const userAttributes = Object.entries(attributes).map(([key, value]) => ({
@@ -294,19 +307,19 @@ export async function updateUserAttributes(username: string, attributes: Partial
       Value: value || "",
     }))
 
-    const command = new AdminUpdateUserAttributesCommand({
+    const updateCommand = new AdminUpdateUserAttributesCommand({
       UserPoolId: userPoolId,
       Username: username,
       UserAttributes: userAttributes,
     })
 
-    await cognitoClient.send(command)
+    await cognitoClient.send(updateCommand)
     console.log('[updateUserAttributes] Cognito update successful')
 
     // Get the current user from DynamoDB using the sub as userId
-    const userData = await getUserFromDynamoDB(username)
+    const userData = await getUserFromDynamoDB(sub)
     if (!userData) {
-      console.error('[updateUserAttributes] User not found in DynamoDB:', username)
+      console.error('[updateUserAttributes] User not found in DynamoDB:', sub)
       return null
     }
 

@@ -4,7 +4,7 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from "
 import { useRouter } from "next/navigation"
 import {
   authenticateUser,
-  updateUserAttributes as updateUserAttributesAction,
+  updateUserAttributes,
   updateUserInDynamoDB,
   getUserFromDynamoDB,
   createUserInDynamoDB,
@@ -385,36 +385,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true)
       setError(null)
-      const accessToken = getTokenFromCookie()
-      if (!accessToken) {
-        throw new Error('No access token found')
+
+      if (!user?.email) {
+        throw new Error('User email not found')
       }
 
-      // Convert attributes to Cognito format
-      const cognitoAttributes = Object.entries(attributes).map(([key, value]) => ({
-        Name: key,
-        Value: value?.toString() || ''
-      }))
-
-      try {
-        await updateAttributes(accessToken, cognitoAttributes)
-      } catch (error) {
-        if (error instanceof Error && error.message.includes('expired')) {
-          // Token expired, refresh auth state
-          await checkAuth()
-          // Retry the update with new token
-          const newToken = getTokenFromCookie()
-          if (newToken) {
-            await updateAttributes(newToken, cognitoAttributes)
-          }
-        } else {
-          throw error
-        }
+      // Update both Cognito and DynamoDB
+      const updatedUser = await updateUserAttributes(user.email, attributes)
+      if (!updatedUser) {
+        throw new Error('Failed to update user attributes')
       }
 
-      // Refresh user data after successful update
-      await checkAuth()
+      // Update local state
+      setUser(updatedUser)
+      setCookie("user", JSON.stringify(updatedUser))
+
     } catch (err) {
+      console.error('[handleUpdateUserAttributes] Error:', err)
       setError(err instanceof Error ? err.message : 'An error occurred')
       throw err
     } finally {
