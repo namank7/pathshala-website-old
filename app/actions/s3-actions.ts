@@ -2,14 +2,14 @@
 
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3"
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner"
-import { fromSSO } from "@aws-sdk/credential-providers"
 
-// Initialize S3 client with SSO credentials
+// Initialize S3 client with direct credentials
 const s3Client = new S3Client({
   region: process.env.AWS_REGION!,
-  credentials: fromSSO({
-    profile: process.env.AWS_PROFILE!
-  }),
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!
+  },
   forcePathStyle: true
 })
 
@@ -21,15 +21,12 @@ export async function generatePresignedUploadUrl(key: string, contentType: strin
     throw new Error("S3 bucket name is not configured")
   }
 
-  if (!process.env.AWS_PROFILE) {
-    throw new Error("AWS profile is not configured")
-  }
-
   console.log("Generating presigned URL for:", {
     bucket: userUploadsBucket,
     key,
     contentType,
-    region: process.env.AWS_REGION
+    region: process.env.AWS_REGION,
+    hasCredentials: !!(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY)
   })
 
   const command = new PutObjectCommand({
