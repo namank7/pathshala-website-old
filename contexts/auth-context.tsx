@@ -386,20 +386,68 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(true)
       setError(null)
 
-      if (!user?.email) {
-        throw new Error('User email not found')
+      if (!user?.userId) {
+        throw new Error('User not found')
       }
 
-      // Update both Cognito and DynamoDB
-      const updatedUser = await updateUserAttributes(user.email, attributes)
-      if (!updatedUser) {
-        throw new Error('Failed to update user attributes')
+      // Get the access token
+      const accessToken = getTokenFromCookie()
+      if (!accessToken) {
+        throw new Error('No access token found')
+      }
+
+      // First update Cognito
+      console.log('[handleUpdateUserAttributes] Updating Cognito:', attributes)
+      const cognitoAttributes = Object.entries(attributes)
+        .filter(([_, value]) => value !== undefined)
+        .map(([key, value]) => ({
+          Name: key,
+          Value: value?.toString() || ''
+        }))
+
+      try {
+        await updateAttributes(accessToken, cognitoAttributes)
+        console.log('[handleUpdateUserAttributes] Cognito update successful')
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('expired')) {
+          // Token expired, refresh auth state and retry
+          await checkAuth()
+          const newToken = getTokenFromCookie()
+          if (newToken) {
+            await updateAttributes(newToken, cognitoAttributes)
+          } else {
+            throw new Error('Failed to refresh token')
+          }
+        } else {
+          throw error
+        }
+      }
+
+      // Then update DynamoDB
+      console.log('[handleUpdateUserAttributes] Updating DynamoDB')
+      const currentData = await getUserFromDynamoDB(user.userId)
+      if (!currentData) {
+        throw new Error('User data not found in DynamoDB')
+      }
+
+      const updatedData: UserData = {
+        ...currentData,
+        ...attributes,
+        userId: user.userId,
+        updatedAt: new Date().toISOString()
+      }
+
+      const success = await updateUserInDynamoDB(updatedData)
+      if (!success) {
+        throw new Error('Failed to update DynamoDB')
       }
 
       // Update local state
-      setUser(updatedUser)
-      setCookie("user", JSON.stringify(updatedUser))
+      console.log('[handleUpdateUserAttributes] Updating local state')
+      setUser(updatedData)
+      setCookie("user", JSON.stringify(updatedData))
 
+      console.log('[handleUpdateUserAttributes] Update completed successfully')
     } catch (err) {
       console.error('[handleUpdateUserAttributes] Error:', err)
       setError(err instanceof Error ? err.message : 'An error occurred')

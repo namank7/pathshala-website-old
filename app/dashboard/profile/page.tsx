@@ -84,25 +84,17 @@ export default function ProfilePage() {
     try {
       setIsLoading(true)
       
-      // Update Cognito attributes (only the ones Cognito supports)
-      const cognitoAttributes: Partial<UserAttributes> = {
-        name: formData.name,
-        phone_number: formData.phone_number,
+      if (!user?.userId) {
+        throw new Error("User ID not found")
       }
-      
-      // Only include picture if it's small enough
-      if (profileImage && profileImage.length <= 131072) {
-        cognitoAttributes.picture = profileImage
-      }
-      
-      await updateUserAttributes(cognitoAttributes)
 
-      // Update DynamoDB with all fields
+      // Prepare the complete user data
       const dynamoData: UserData = {
         ...userData,
+        userId: user.userId, // Ensure we have the correct userId
         name: formData.name,
         phone_number: formData.phone_number,
-        picture: profileImage, // DynamoDB can handle the full-size image
+        picture: profileImage,
         dateOfBirth: formData.dateOfBirth,
         gender: formData.gender,
         address: {
@@ -126,7 +118,15 @@ export default function ProfilePage() {
           twitter: formData.twitter,
           github: formData.github,
         },
+        updatedAt: new Date().toISOString(),
       }
+
+      // Update both Cognito and DynamoDB
+      await updateUserAttributes({
+        name: formData.name,
+        phone_number: formData.phone_number,
+        picture: profileImage,
+      })
 
       // Call DynamoDB update function
       const success = await updateUserInDynamoDB(dynamoData)
