@@ -4,7 +4,7 @@ applications:
       phases:
         preBuild:
           commands:
-            - npm ci
+            - npm ci --legacy-peer-deps
         build:
           commands:
             - npm run build
@@ -12,7 +12,11 @@ applications:
         baseDirectory: .next
         files:
           - '**/*'
+          - '../public/**/*'
+          - '../package.json'
+          - '../next.config.js'
       cache:
         paths:
           - node_modules/**/*
-    appRoot: . 
+    appRoot: .
+    buildPath: / 
