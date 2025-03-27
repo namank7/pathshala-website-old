@@ -6,7 +6,7 @@ frontend:
         - npm ci --legacy-peer-deps
     build:
       commands:
-        - env | grep -e NEXT_PUBLIC_ || true  # Log environment variables for debugging
+        - env | grep -e NEXT_PUBLIC_ -e CUSTOM_ || true  # Log environment variables for debugging
         - npm run build
   artifacts:
     baseDirectory: .next
@@ -19,9 +19,9 @@ frontend:
     paths:
       - node_modules/**/*
   environmentVariables:
-    - AWS_ACCESS_KEY_ID
-    - AWS_SECRET_ACCESS_KEY
-    - AWS_REGION
+    - CUSTOM_AWS_ACCESS_KEY
+    - CUSTOM_AWS_SECRET_KEY
+    - CUSTOM_AWS_REGION
     - NEXT_PUBLIC_AWS_REGION
     - NEXT_PUBLIC_AWS_USER_POOL_ID
     - NEXT_PUBLIC_AWS_USER_POOL_CLIENT_ID

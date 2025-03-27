@@ -24,12 +24,12 @@ import { cognitoConfig, region } from '@/lib/aws-config'
 
 // Initialize Cognito client for server-side operations
 const cognitoClient = new CognitoIdentityProviderClient({
-  region,
-  ...(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
+  region: process.env.CUSTOM_AWS_REGION || region,
+  ...(process.env.CUSTOM_AWS_ACCESS_KEY && process.env.CUSTOM_AWS_SECRET_KEY
     ? {
         credentials: {
-          accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+          accessKeyId: process.env.CUSTOM_AWS_ACCESS_KEY,
+          secretAccessKey: process.env.CUSTOM_AWS_SECRET_KEY,
         },
       }
     : {}),
