@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb"
-import { DynamoDBDocumentClient, ScanCommand, DescribeTableCommand } from "@aws-sdk/lib-dynamodb"
+import { DynamoDBDocumentClient, ScanCommand } from "@aws-sdk/lib-dynamodb"
+import { DescribeTableCommand } from '@aws-sdk/client-dynamodb'
 
 export async function GET() {
   try {
