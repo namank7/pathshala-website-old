@@ -1,22 +1,30 @@
 version: 1
-applications:
-  - frontend:
-      phases:
-        preBuild:
-          commands:
-            - npm ci --legacy-peer-deps
-        build:
-          commands:
-            - npm run build
-      artifacts:
-        baseDirectory: .next
-        files:
-          - '**/*'
-          - '../public/**/*'
-          - '../package.json'
-          - '../next.config.js'
-      cache:
-        paths:
-          - node_modules/**/*
-    appRoot: .
-    buildPath: / 
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - npm ci --legacy-peer-deps
+    build:
+      commands:
+        - env | grep -e NEXT_PUBLIC_ || true  # Log environment variables for debugging
+        - npm run build
+  artifacts:
+    baseDirectory: .next
+    files:
+      - '**/*'
+      - '../public/**/*'
+      - '../package.json'
+      - '../next.config.js'
+  cache:
+    paths:
+      - node_modules/**/*
+  environmentVariables:
+    - NEXT_PUBLIC_AWS_REGION
+    - NEXT_PUBLIC_AWS_USER_POOL_ID
+    - NEXT_PUBLIC_AWS_USER_POOL_CLIENT_ID
+    - NEXT_PUBLIC_AWS_S3_BUCKET
+    - DYNAMODB_USERS_TABLE
+    - DYNAMODB_BOOKINGS_TABLE
+    - DYNAMODB_COURSES_TABLE
+appRoot: .
+buildPath: / 
