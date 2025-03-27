@@ -9,8 +9,4 @@ export default function LoginPage() {
       <LoginForm />
     </Suspense>
   )
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 7ba4be050bc1a7e6f761b864e9aebb3516faf32c
