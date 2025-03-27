@@ -6,11 +6,7 @@ frontend:
         - npm ci --legacy-peer-deps
     build:
       commands:
-<<<<<<< HEAD
         - env | grep -e NEXT_PUBLIC_ || true  # Log environment variables for debugging
-=======
-        - env | grep -e AWS -e NEXT_PUBLIC_ || true  # Log environment variables for debugging
->>>>>>> 7ba4be050bc1a7e6f761b864e9aebb3516faf32c
         - npm run build
   artifacts:
     baseDirectory: .next
@@ -23,13 +19,6 @@ frontend:
     paths:
       - node_modules/**/*
   environmentVariables:
-<<<<<<< HEAD
-=======
-    - AWS_SDK_LOAD_CONFIG
-    - AWS_ACCESS_KEY_ID
-    - AWS_SECRET_ACCESS_KEY
-    - AWS_REGION
->>>>>>> 7ba4be050bc1a7e6f761b864e9aebb3516faf32c
     - NEXT_PUBLIC_AWS_REGION
     - NEXT_PUBLIC_AWS_USER_POOL_ID
     - NEXT_PUBLIC_AWS_USER_POOL_CLIENT_ID
@@ -38,8 +27,4 @@ frontend:
     - DYNAMODB_BOOKINGS_TABLE
     - DYNAMODB_COURSES_TABLE
 appRoot: .
-<<<<<<< HEAD
-buildPath: / 
-=======
-buildPath: / 
->>>>>>> 7ba4be050bc1a7e6f761b864e9aebb3516faf32c
+buildPath: /
