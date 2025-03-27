@@ -88,10 +88,24 @@ export default function ProfilePage() {
         throw new Error("User ID not found")
       }
 
-      // Prepare the complete user data
+      console.log('[Profile] Starting update:', {
+        userId: user.userId,
+        fields: Object.keys(formData),
+      })
+
+      // First update Cognito with supported fields
+      await updateUserAttributes({
+        name: formData.name,
+        phone_number: formData.phone_number,
+        picture: profileImage,
+      })
+
+      console.log('[Profile] Cognito update successful')
+
+      // Then update DynamoDB with all fields
       const dynamoData: UserData = {
-        ...userData,
-        userId: user.userId, // Ensure we have the correct userId
+        ...userData, // Keep existing data
+        userId: user.userId,
         name: formData.name,
         phone_number: formData.phone_number,
         picture: profileImage,
@@ -118,14 +132,11 @@ export default function ProfilePage() {
           twitter: formData.twitter,
           github: formData.github,
         },
-        updatedAt: new Date().toISOString(),
       }
 
-      // Update both Cognito and DynamoDB
-      await updateUserAttributes({
-        name: formData.name,
-        phone_number: formData.phone_number,
-        picture: profileImage,
+      console.log('[Profile] Updating DynamoDB:', {
+        userId: user.userId,
+        fields: Object.keys(dynamoData),
       })
 
       // Call DynamoDB update function
@@ -135,13 +146,15 @@ export default function ProfilePage() {
         throw new Error("Failed to update profile in database")
       }
 
+      console.log('[Profile] Update successful')
+
       toast.success("Profile updated successfully", {
         duration: 3000,
         position: "top-right",
       })
       setIsEditing(false)
     } catch (error) {
-      console.error("Error updating profile:", error)
+      console.error("[Profile] Error updating profile:", error)
       toast.error("Failed to update profile. Please try again.", {
         duration: 5000,
         position: "top-right",

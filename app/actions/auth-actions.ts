@@ -130,13 +130,34 @@ export async function updateUserInDynamoDB(userData: UserData): Promise<boolean>
       throw new Error('DynamoDB table name not configured')
     }
 
+    // First get existing data to ensure we don't lose any fields
+    const existingData = await getUserFromDynamoDB(userData.userId)
+    if (!existingData) {
+      console.error('[DynamoDB] User not found:', userData.userId)
+      return false
+    }
+
+    // Merge existing data with new data, ensuring we keep the userId
+    const mergedData = {
+      ...existingData,
+      ...userData,
+      userId: existingData.userId, // Always keep the original userId
+      updatedAt: new Date().toISOString(),
+    }
+
+    // Log the data being updated
+    console.log('[DynamoDB] Updating user with data:', {
+      userId: mergedData.userId,
+      fields: Object.keys(userData),
+      timestamp: new Date().toISOString(),
+    })
+
     await docClient.send(
       new PutCommand({
         TableName: tableName,
-        Item: {
-          ...userData,
-          updatedAt: new Date().toISOString(),
-        },
+        Item: mergedData,
+        // Add condition to ensure userId exists
+        ConditionExpression: 'attribute_exists(userId)',
       }),
     )
 
