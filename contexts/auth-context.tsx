@@ -325,6 +325,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const updatedData: UserData = {
         ...currentData,
         ...data,
+        userId: user.userId, // Ensure we keep the correct userId
         updatedAt: new Date().toISOString()
       }
 
@@ -338,19 +339,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(updatedData)
       setCookie("user", JSON.stringify(updatedData))
 
-      // Refresh the access token if needed
+      // Get the access token
       const accessToken = getTokenFromCookie()
       if (!accessToken) {
-        await checkAuth() // This will redirect to login if token is invalid
-        return
+        throw new Error('No access token found')
       }
 
       try {
         // Try to update Cognito attributes if applicable
-        if (data.name || data.phone_number) {
+        if (data.name || data.phone_number || data.picture) {
           const cognitoAttributes = Object.entries({
             name: data.name,
-            phone_number: data.phone_number
+            phone_number: data.phone_number,
+            picture: data.picture
           })
           .filter(([_, value]) => value !== undefined)
           .map(([key, value]) => ({
@@ -358,9 +359,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             Value: value?.toString() || ''
           }))
 
-          await updateAttributes(accessToken, cognitoAttributes)
+          if (cognitoAttributes.length > 0) {
+            await updateAttributes(accessToken, cognitoAttributes)
+          }
         }
       } catch (error) {
+        console.error('[handleUpdateUserData] Cognito update error:', error)
         if (error instanceof Error && error.message.includes('expired')) {
           // Token expired, refresh auth state
           await checkAuth()
@@ -369,6 +373,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
     } catch (err) {
+      console.error('[handleUpdateUserData] Error:', err)
       setError(err instanceof Error ? err.message : 'An error occurred while updating user data')
       throw err
     } finally {

@@ -276,6 +276,19 @@ export async function authenticateUser(username: string, password: string) {
 // Update user attributes
 export async function updateUserAttributes(username: string, attributes: Partial<UserAttributes>) {
   try {
+    console.log('[updateUserAttributes] Starting update:', {
+      username,
+      attributes: Object.keys(attributes),
+      timestamp: new Date().toISOString(),
+    })
+
+    // First, get the user's Cognito attributes to get the sub (userId)
+    const userDetails = await getCognitoUserAttributes(username)
+    if (!userDetails) {
+      throw new Error('Failed to get user details from Cognito')
+    }
+
+    // Update Cognito attributes
     const userAttributes = Object.entries(attributes).map(([key, value]) => ({
       Name: key,
       Value: value || "",
@@ -288,23 +301,35 @@ export async function updateUserAttributes(username: string, attributes: Partial
     })
 
     await cognitoClient.send(command)
+    console.log('[updateUserAttributes] Cognito update successful')
 
-    // Update DynamoDB
+    // Get the current user from DynamoDB using the sub as userId
     const userData = await getUserFromDynamoDB(username)
-
-    if (userData) {
-      const updatedUser = {
-        ...userData,
-        ...attributes,
-      }
-
-      await updateUserInDynamoDB(updatedUser)
-      return updatedUser
+    if (!userData) {
+      console.error('[updateUserAttributes] User not found in DynamoDB:', username)
+      return null
     }
 
-    return null
+    // Update DynamoDB with new attributes
+    const updatedUser = {
+      ...userData,
+      ...attributes,
+      updatedAt: new Date().toISOString(),
+    }
+
+    const success = await updateUserInDynamoDB(updatedUser)
+    if (!success) {
+      throw new Error('Failed to update user in DynamoDB')
+    }
+
+    console.log('[updateUserAttributes] DynamoDB update successful')
+    return updatedUser
   } catch (error) {
-    console.error("Error updating user attributes:", error)
+    console.error('[updateUserAttributes] Error:', {
+      username,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    })
     throw error
   }
 }
