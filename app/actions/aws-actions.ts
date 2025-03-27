@@ -183,10 +183,22 @@ export async function updateAttributes(
   accessToken: string,
   attributes: { Name: string; Value: string }[]
 ): Promise<UpdateUserAttributesCommandOutput> {
-  const command = new UpdateUserAttributesCommand({
-    AccessToken: accessToken,
-    UserAttributes: attributes
-  })
+  try {
+    console.log('[updateAttributes] Starting update:', {
+      attributes: attributes.map(attr => ({ name: attr.Name })),
+      timestamp: new Date().toISOString(),
+    })
 
-  return await cognitoClient.send(command)
+    const command = new UpdateUserAttributesCommand({
+      AccessToken: accessToken,
+      UserAttributes: attributes
+    })
+
+    const result = await cognitoClient.send(command)
+    console.log('[updateAttributes] Update successful')
+    return result
+  } catch (error) {
+    logError('updateAttributes', error)
+    throw new Error(`Failed to update attributes: ${error instanceof Error ? error.message : 'Unknown error'}`)
+  }
 } 

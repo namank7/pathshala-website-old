@@ -9,30 +9,41 @@ import {
 } from "@aws-sdk/client-cognito-identity-provider"
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb"
 import { DynamoDBDocumentClient, GetCommand, PutCommand } from "@aws-sdk/lib-dynamodb"
-import { fromSSO } from "@aws-sdk/credential-providers"
 
 // AWS Configuration
-const region = process.env.AWS_REGION || ""
+const region = process.env.CUSTOM_AWS_REGION || process.env.NEXT_PUBLIC_AWS_REGION || "us-east-1"
 const userPoolId = process.env.NEXT_PUBLIC_AWS_USER_POOL_ID || ""
 const clientId = process.env.NEXT_PUBLIC_AWS_USER_POOL_CLIENT_ID || ""
 const tableName = process.env.DYNAMODB_USERS_TABLE || ""
-const profile = process.env.AWS_PROFILE || ""
 
-// Create SSO credentials provider
-const credentials = fromSSO({
-  profile
-})
+// Initialize AWS credentials
+const credentials = process.env.CUSTOM_AWS_ACCESS_KEY && process.env.CUSTOM_AWS_SECRET_KEY
+  ? {
+      accessKeyId: process.env.CUSTOM_AWS_ACCESS_KEY,
+      secretAccessKey: process.env.CUSTOM_AWS_SECRET_KEY,
+    }
+  : undefined
 
-// Initialize Cognito client with SSO credentials
+// Initialize Cognito client
 const cognitoClient = new CognitoIdentityProviderClient({
   region,
-  credentials
+  credentials,
 })
 
-// Initialize DynamoDB client with SSO credentials
+// Initialize DynamoDB client
 const dynamoClient = new DynamoDBClient({
   region,
-  credentials
+  credentials,
+})
+
+// Log configuration on startup
+console.log('[AWS Config] Service initialization:', {
+  region,
+  hasCredentials: !!credentials,
+  hasUserPoolId: !!userPoolId,
+  hasClientId: !!clientId,
+  hasTableName: !!tableName,
+  timestamp: new Date().toISOString(),
 })
 
 const docClient = DynamoDBDocumentClient.from(dynamoClient)
@@ -109,16 +120,41 @@ export async function getUserFromDynamoDB(userId: string): Promise<UserData | nu
 // Update user in DynamoDB
 export async function updateUserInDynamoDB(userData: UserData): Promise<boolean> {
   try {
+    console.log('[DynamoDB] Starting user update:', {
+      userId: userData.userId,
+      tableName,
+      timestamp: new Date().toISOString(),
+    })
+
+    if (!tableName) {
+      throw new Error('DynamoDB table name not configured')
+    }
+
     await docClient.send(
       new PutCommand({
         TableName: tableName,
-        Item: userData,
+        Item: {
+          ...userData,
+          updatedAt: new Date().toISOString(),
+        },
       }),
     )
 
+    console.log('[DynamoDB] User update successful:', {
+      userId: userData.userId,
+      timestamp: new Date().toISOString(),
+    })
+
     return true
   } catch (error) {
-    console.error("Error updating user in DynamoDB:", error)
+    console.error('[DynamoDB] Error updating user:', {
+      userId: userData.userId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      tableName,
+      region,
+      hasCredentials: !!(process.env.CUSTOM_AWS_ACCESS_KEY && process.env.CUSTOM_AWS_SECRET_KEY),
+      timestamp: new Date().toISOString(),
+    })
     return false
   }
 }
