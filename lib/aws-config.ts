@@ -1,37 +1,33 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb"
 import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb"
 import { CognitoIdentityProviderClient } from "@aws-sdk/client-cognito-identity-provider"
-import { fromSSO } from "@aws-sdk/credential-providers"
 
 // Debug environment variables (only in development)
 if (process.env.NODE_ENV === 'development') {
   console.log('Environment Variables Check:', {
-    hasRegion: !!process.env.AWS_REGION,
+    hasRegion: !!process.env.CUSTOM_AWS_REGION,
+    hasAccessKey: !!process.env.CUSTOM_AWS_ACCESS_KEY,
+    hasSecretKey: !!process.env.CUSTOM_AWS_SECRET_KEY,
     hasPublicRegion: !!process.env.NEXT_PUBLIC_AWS_REGION,
     hasUserPoolId: !!process.env.NEXT_PUBLIC_AWS_USER_POOL_ID,
     hasClientId: !!process.env.NEXT_PUBLIC_AWS_USER_POOL_CLIENT_ID,
     hasS3Bucket: !!process.env.NEXT_PUBLIC_AWS_S3_BUCKET,
-    hasProfile: !!process.env.AWS_PROFILE,
   })
 }
 
 // Validate environment variables
 function validateEnvVar(name: string, value: string | undefined, isPublic = false): string {
   if (!value) {
-    const prefix = isPublic ? 'NEXT_PUBLIC_' : ''
+    const prefix = isPublic ? 'NEXT_PUBLIC_' : 'CUSTOM_'
     throw new Error(
-      `${prefix}${name} not configured. Please add it to your .env.local file. If you've already added it, try restarting the Next.js server.`
+      `${prefix}${name} not configured. Please add it to your environment variables. If you've already added it, try restarting the server.`
     )
   }
   return value
 }
 
 // Public AWS Configuration (safe to expose to client)
-export const region = validateEnvVar(
-  "AWS_REGION",
-  process.env.NEXT_PUBLIC_AWS_REGION,
-  true
-)
+export const region = process.env.NEXT_PUBLIC_AWS_REGION || 'us-east-1'
 
 export const userPoolId = validateEnvVar(
   "AWS_USER_POOL_ID",
@@ -51,24 +47,28 @@ let dynamoDbInstance: DynamoDBDocumentClient | null = null
 
 if (typeof window === 'undefined') {
   // Server-side AWS configuration
-  const serverRegion = validateEnvVar("AWS_REGION", process.env.AWS_REGION)
-  const profile = validateEnvVar("AWS_PROFILE", process.env.AWS_PROFILE)
+  const serverRegion = process.env.CUSTOM_AWS_REGION || region
+  const credentials = process.env.CUSTOM_AWS_ACCESS_KEY && process.env.CUSTOM_AWS_SECRET_KEY
+    ? {
+        accessKeyId: process.env.CUSTOM_AWS_ACCESS_KEY,
+        secretAccessKey: process.env.CUSTOM_AWS_SECRET_KEY,
+      }
+    : undefined
 
-  // Create SSO credentials provider
-  const credentials = fromSSO({
-    profile
-  })
+  if (!credentials) {
+    console.warn('AWS credentials not found. Some functionality may be limited.')
+  }
 
   // Initialize Cognito client
   cognitoClientInstance = new CognitoIdentityProviderClient({
     region: serverRegion,
-    credentials
+    credentials,
   })
 
   // Initialize DynamoDB client
   const ddbClient = new DynamoDBClient({
     region: serverRegion,
-    credentials
+    credentials,
   })
 
   dynamoDbInstance = DynamoDBDocumentClient.from(ddbClient)

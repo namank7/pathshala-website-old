@@ -22,6 +22,19 @@ import {
 } from '@aws-sdk/client-cognito-identity-provider'
 import { cognitoConfig, region } from '@/lib/aws-config'
 
+function logError(action: string, error: any) {
+  console.error(`[${action}] Error Details:`, {
+    message: error.message,
+    code: error.code,
+    time: new Date().toISOString(),
+    requestId: error.$metadata?.requestId,
+    cfId: error.$metadata?.cfId,
+    statusCode: error.$metadata?.httpStatusCode,
+    region: process.env.CUSTOM_AWS_REGION || region,
+    hasCredentials: !!(process.env.CUSTOM_AWS_ACCESS_KEY && process.env.CUSTOM_AWS_SECRET_KEY),
+  })
+}
+
 // Initialize Cognito client for server-side operations
 const cognitoClient = new CognitoIdentityProviderClient({
   region: process.env.CUSTOM_AWS_REGION || region,
@@ -37,6 +50,7 @@ const cognitoClient = new CognitoIdentityProviderClient({
 
 export async function initiateAuth(email: string, password: string): Promise<InitiateAuthCommandOutput> {
   try {
+    console.log('[initiateAuth] Attempting authentication for:', email)
     const command = new InitiateAuthCommand({
       AuthFlow: AuthFlowType.USER_PASSWORD_AUTH,
       ClientId: cognitoConfig.clientId,
@@ -46,19 +60,29 @@ export async function initiateAuth(email: string, password: string): Promise<Ini
       },
     })
 
-    return await cognitoClient.send(command)
+    const result = await cognitoClient.send(command)
+    console.log('[initiateAuth] Authentication successful')
+    return result
   } catch (error) {
-    console.error('InitiateAuth error:', error)
-    throw error
+    logError('initiateAuth', error)
+    throw new Error(`Authentication failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
   }
 }
 
 export async function getUserAttributes(accessToken: string): Promise<GetUserCommandOutput> {
-  const command = new GetUserCommand({
-    AccessToken: accessToken
-  })
-  
-  return await cognitoClient.send(command)
+  try {
+    console.log('[getUserAttributes] Fetching user attributes')
+    const command = new GetUserCommand({
+      AccessToken: accessToken
+    })
+    
+    const result = await cognitoClient.send(command)
+    console.log('[getUserAttributes] Successfully retrieved user attributes')
+    return result
+  } catch (error) {
+    logError('getUserAttributes', error)
+    throw new Error(`Failed to get user attributes: ${error instanceof Error ? error.message : 'Unknown error'}`)
+  }
 }
 
 export async function signUp(
@@ -67,18 +91,26 @@ export async function signUp(
   userType: string,
   name: string
 ): Promise<SignUpCommandOutput> {
-  const command = new SignUpCommand({
-    ClientId: cognitoConfig.clientId,
-    Username: email,
-    Password: password,
-    UserAttributes: [
-      { Name: 'email', Value: email },
-      { Name: 'name', Value: name },
-      { Name: 'custom:userType', Value: userType }
-    ]
-  })
+  try {
+    console.log('[signUp] Attempting signup for:', email)
+    const command = new SignUpCommand({
+      ClientId: cognitoConfig.clientId,
+      Username: email,
+      Password: password,
+      UserAttributes: [
+        { Name: 'email', Value: email },
+        { Name: 'name', Value: name },
+        { Name: 'custom:userType', Value: userType }
+      ]
+    })
 
-  return await cognitoClient.send(command)
+    const result = await cognitoClient.send(command)
+    console.log('[signUp] Signup successful')
+    return result
+  } catch (error) {
+    logError('signUp', error)
+    throw new Error(`Signup failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+  }
 }
 
 export async function confirmSignUp(
