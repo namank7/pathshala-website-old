@@ -48,9 +48,23 @@ const cognitoClient = new CognitoIdentityProviderClient({
     : {}),
 })
 
+// Log initial configuration
+console.log('[AWS Config] Initialization:', {
+  region: process.env.CUSTOM_AWS_REGION || region,
+  hasCredentials: !!(process.env.CUSTOM_AWS_ACCESS_KEY && process.env.CUSTOM_AWS_SECRET_KEY),
+  userPoolId: cognitoConfig.userPoolId,
+  clientId: cognitoConfig.clientId,
+  timestamp: new Date().toISOString(),
+})
+
 export async function initiateAuth(email: string, password: string): Promise<InitiateAuthCommandOutput> {
   try {
-    console.log('[initiateAuth] Attempting authentication for:', email)
+    console.log('[initiateAuth] Starting authentication:', {
+      email,
+      clientId: cognitoConfig.clientId,
+      timestamp: new Date().toISOString(),
+    })
+    
     const command = new InitiateAuthCommand({
       AuthFlow: AuthFlowType.USER_PASSWORD_AUTH,
       ClientId: cognitoConfig.clientId,
@@ -61,7 +75,10 @@ export async function initiateAuth(email: string, password: string): Promise<Ini
     })
 
     const result = await cognitoClient.send(command)
-    console.log('[initiateAuth] Authentication successful')
+    console.log('[initiateAuth] Authentication successful:', {
+      email,
+      timestamp: new Date().toISOString(),
+    })
     return result
   } catch (error) {
     logError('initiateAuth', error)
