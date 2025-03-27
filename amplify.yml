@@ -19,6 +19,9 @@ frontend:
     paths:
       - node_modules/**/*
   environmentVariables:
+    - AWS_ACCESS_KEY_ID
+    - AWS_SECRET_ACCESS_KEY
+    - AWS_REGION
     - NEXT_PUBLIC_AWS_REGION
     - NEXT_PUBLIC_AWS_USER_POOL_ID
     - NEXT_PUBLIC_AWS_USER_POOL_CLIENT_ID

@@ -25,23 +25,32 @@ import { cognitoConfig, region } from '@/lib/aws-config'
 // Initialize Cognito client for server-side operations
 const cognitoClient = new CognitoIdentityProviderClient({
   region,
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-  }
+  ...(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
+    ? {
+        credentials: {
+          accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+        },
+      }
+    : {}),
 })
 
 export async function initiateAuth(email: string, password: string): Promise<InitiateAuthCommandOutput> {
-  const command = new InitiateAuthCommand({
-    AuthFlow: AuthFlowType.USER_PASSWORD_AUTH,
-    ClientId: cognitoConfig.clientId,
-    AuthParameters: {
-      USERNAME: email,
-      PASSWORD: password,
-    },
-  })
+  try {
+    const command = new InitiateAuthCommand({
+      AuthFlow: AuthFlowType.USER_PASSWORD_AUTH,
+      ClientId: cognitoConfig.clientId,
+      AuthParameters: {
+        USERNAME: email,
+        PASSWORD: password,
+      },
+    })
 
-  return await cognitoClient.send(command)
+    return await cognitoClient.send(command)
+  } catch (error) {
+    console.error('InitiateAuth error:', error)
+    throw error
+  }
 }
 
 export async function getUserAttributes(accessToken: string): Promise<GetUserCommandOutput> {
